@@ -2,6 +2,14 @@
 #include <avr/interrupt.h>
 #define thr 256
 
+//L-VCC P-CHANNEL 11
+//N-VCC P-CHANNEL 12
+//L-GND N-CHANNEL 10
+//N-GND N-CHANNEL 9
+//FAN PWM 8  - can be used for communication
+//FAN TACH 5 - can be used for communication
+//PHASE LOCK A0
+
 #define GF_out 6  //outputs HIGH
 #define GF_in 7   //checks if HIGH, if yes, grid forming mode
 
@@ -13,30 +21,34 @@ bool GF=false;
 //GRID TIED
 bool active=false;
 
-//GRID FORMING
+//NRID FORMING
 unsigned long t;
 int maxx=-100;
 int readd;
 
 void setup() {
   cli();
+  //set parameters for operating mode check
   pinMode(GF_in, INPUT);
   pinMode(GF_out, OUTPUT);
   digitalWrite(GF_out, HIGH);
+  //SET PIN IO
+  DDRB = 0b00000110; // Set PB1 and PB2 as outputs.
   pinMode(11,OUTPUT);//L-VCC P-CHANNEL
   pinMode(12,OUTPUT);//N-VCC P-CHANNEL
-  pinMode(14,OUTPUT);//fan pwm out
+  pinMode(8,OUTPUT);//fan pwm out
+  pinMode(5,INPUT);//fan tach in
   pinMode(A0, INPUT);//phase lock input
   digitalWrite(12, LOW);//makes sure N-VCC is not active so avoid shorts while phase lock reading
-  digitalWrite(9, HIGH);//connects N to VCC for phase lock reading
-  digitalWrite(14, HIGH);
+  digitalWrite(9, HIGH);//connects N to GND for phase lock reading
+  digitalWrite(8, HIGH);//fan set to 100% pwm
   delay(10);
 
   TCCR1A = 0b10100010;
   TCCR1B = 0b00011001;
   TIMSK1 = 0b00000001;
   ICR1   = 1600;     // Period for 16MHz crystal, for a switching frequency of 100KHz for 200 subdevisions per 50Hz sin wave cycle.
-  DDRB = 0b00000110; // Set PB1 and PB2 as outputs.
+  //determine operating mode
   GF=digitalRead(GF_in)==HIGH;
   
   if(GF){//grid forming mode
